@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: apache-replicaset
+spec:
+  replicas: 3  # The desired number of Pods
+  selector:
+    matchLabels:
+      app: apache  # This must match the Pod's label
+  template:
+    metadata:
+      labels:
+        app: apache
+    spec:
+      containers:
+      - name: apache-container
+        image: httpd
+      
