@@ -11,4 +11,4 @@ spec:
   # storageClassName: "standard"
   # for eks
   storageClassName: gp2
-  # volumeName: static-files-pv
+  volumeName: gp2-pv

@@ -7,3 +7,6 @@ kubeconfig/
 **/.terraform/
 .terraform
 variables.tf
+
+*.tfstate
+*.tfstate.*
