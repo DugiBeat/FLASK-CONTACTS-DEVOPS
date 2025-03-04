@@ -57,32 +57,6 @@ pipeline {
             }
         }
 
-        stage('Configure Prometheus to Scrape Jenkins & App') {
-            steps {
-                echo 'Configuring Prometheus...'
-                sh '''#!/bin/bash
-                set -e
-
-                echo "Configuring Prometheus scrape targets..."
-                echo "global:
-                  scrape_interval: 15s
-
-                scrape_configs:
-                  - job_name: 'jenkins'
-                    static_configs:
-                      - targets: ['localhost:5052']
-
-                  - job_name: 'application'
-                    static_configs:
-                      - targets: ['localhost:5000']
-                " | sudo tee $PROMETHEUS_CONFIG
-
-                echo "Restarting Prometheus service..."
-                sudo systemctl restart prometheus || sudo systemctl start prometheus
-                '''
-            }
-        }
-
         stage('Run Database Migrations') {
             steps {
                 echo 'Running database migrations...'
@@ -103,6 +77,32 @@ pipeline {
             }
         }
 
+                stage('Configure Prometheus to Scrape Jenkins & App') {
+            steps {
+                echo 'Configuring Prometheus...'
+                sh '''#!/bin/bash
+                set -e
+
+                echo "Configuring Prometheus scrape targets..."
+                echo "global:
+                  scrape_interval: 15s
+
+                scrape_configs:
+                  - job_name: 'jenkins'
+                    static_configs:
+                      - targets: ['localhost:8080']
+
+                  - job_name: 'application'
+                    static_configs:
+                      - targets: ['localhost:5052']
+                " | sudo tee $PROMETHEUS_CONFIG
+
+                echo "Restarting Prometheus service..."
+                sudo systemctl restart prometheus || sudo systemctl start prometheus
+                '''
+            }
+        }
+        
         stage('Verify Prometheus Scraping') {
             steps {
                 echo 'Checking Prometheus targets...'
