@@ -29,13 +29,19 @@ def generate_image(prompt, filename):
             print(f"Failed to generate image: {e}")
     return None
 
-
-# create a connection to the database
+# Update your database connection
 db = mysql.connector.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    user=os.getenv("DB_USER", "root"),
-    passwd=os.getenv("DB_PASSWORD", "admin"),
+    host='localhost',  # or '127.0.0.1'
+    user='jenkins_user',  # match the user in the playbook
+    password='your_jenkins_mysql_password',
+    database='flask_contacts_db'
 )
+# create a connection to the database
+#db = mysql.connector.connect(
+ #   host=os.getenv("DB_HOST", "localhost"),
+  #  user=os.getenv("DB_USER", "root"),
+   # passwd=os.getenv("DB_PASSWORD", "admin"),
+#)
 
 cursor = db.cursor(dictionary=True)
 
