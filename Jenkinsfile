@@ -57,16 +57,6 @@ pipeline {
             }
         }
 
-        stage('Run Database Migrations') {
-            steps {
-                echo 'Running database migrations...'
-                sh '''#!/bin/bash
-                set -e
-                bash -c "source $WORKSPACE/$VIRTUAL_ENV/bin/activate && python migrate.py"
-                '''
-            }
-        }
-
         stage('Run Application') {
             steps {
                 echo 'Starting the Flask application...'
@@ -77,6 +67,15 @@ pipeline {
             }
         }
 
+        stage('Run Database Migrations') {
+            steps {
+                echo 'Running database migrations...'
+                sh '''#!/bin/bash
+                set -e
+                bash -c "source $WORKSPACE/$VIRTUAL_ENV/bin/activate && python migrate.py"
+                '''
+            }
+        }
                 stage('Configure Prometheus to Scrape Jenkins & App') {
             steps {
                 echo 'Configuring Prometheus...'
