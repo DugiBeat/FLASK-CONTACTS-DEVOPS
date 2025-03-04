@@ -70,7 +70,7 @@ pipeline {
                 scrape_configs:
                   - job_name: 'jenkins'
                     static_configs:
-                      - targets: ['localhost:8080']
+                      - targets: ['localhost:5052']
 
                   - job_name: 'application'
                     static_configs:
