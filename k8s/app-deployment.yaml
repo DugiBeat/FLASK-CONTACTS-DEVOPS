@@ -17,4 +17,8 @@ spec:
         image: my-docker-registry/my-app-image:latest
         ports:
         - containerPort: 8080
-
+        env:
+        - name: FLASK_APP
+          value: "app.py"
+        - name: FLASK_ENV
+          value: "production"
