@@ -7,6 +7,64 @@ pipeline {
         KUBECONFIG = '/var/lib/jenkins/.kube/config' // Path for kubeconfig
         AWS_ACCESS_KEY = credentials('AWS_KEY') // Uses Jenkins credential ID
         AWS_SECRET_KEY = credentials('AWS_S_KEY') // Uses Jenkins credential ID
+        IMAGE_TAG = "latest"
+    }
+
+    parameters {
+        string(name: 'APP_NAMESPACE', defaultValue: 'default', description: 'Kubernetes namespace for application')
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                echo 'Cloning the GitHub repository...'
+                git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
+            }
+        }
+
+        stage('Login to AWS ECR') {
+            steps {
+                sh """
+                aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                """
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG ."
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh "kubectl create namespace ${params.APP_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                sh "kubectl apply -f k8s/ -n ${params.APP_NAMESPACE}"
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh "kubectl get pods,svc,deployments -n ${params.APP_NAMESPACE}"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful! Your application is now running in the ${params.APP_NAMESPACE} namespace."
+        }
+        failure {
+            echo "❌ Deployment failed. Check the logs for more information."
+        }
+    }
+}
     }
 
     stages {
