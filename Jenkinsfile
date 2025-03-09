@@ -1,69 +1,76 @@
 pipeline {
     agent any
-    
-    parameters {
-        string(name: 'APP_NAMESPACE', defaultValue: 'default', description: 'Kubernetes namespace for application')
-    }
-    
+
     environment {
-        KUBECONFIG = credentials('KUBE_CONFIG') // 🔹 Uses stored kubeconfig file in Jenkins
+        AWS_REGION = 'eu-north-1'  // Change to your AWS region
+        CLUSTER_NAME = 'eks_mause' // Replace with your EKS cluster name
+        KUBECONFIG = '/var/lib/jenkins/.kube/config' // Path for kubeconfig
+        AWS_ACCESS_KEY = credentials('AWS_KEY') // Uses Jenkins credential ID
+        AWS_SECRET_KEY = credentials('AWS_S_KEY') // Uses Jenkins credential ID
     }
-    
+
     stages {
-        stage('Clone Repository') {
-            steps {
-                echo '🔹 Cloning the GitHub repository...'
-                git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
-            }
-        }
-        
-        stage('Deploy to Kubernetes') {
+        stage('Setup AWS CLI & Configure K8s') {
             steps {
                 script {
-                    echo '🔹 Checking if namespace exists...'
-                    def namespaceCheck = sh(script: "kubectl get namespace ${params.APP_NAMESPACE} || echo 'missing'", returnStdout: true).trim()
-                    
-                    if (namespaceCheck.contains("missing")) {
-                        echo "🔹 Creating namespace: ${params.APP_NAMESPACE}"
-                        sh "kubectl create namespace ${params.APP_NAMESPACE}"
-                    } else {
-                        echo "✅ Namespace ${params.APP_NAMESPACE} already exists."
-                    }
-                }
-                
-                echo '🔹 Deploying application to Kubernetes...'
-                def files = [
-                    "alertmaneger-deployment.yaml",
-                    "app-deployment.yaml",
-                    "app-service.yaml",
-                    "grafana-deployment.yaml",
-                    "grafana-service.yaml",
-                    "prometheus-config.yaml",
-                    "prometheus-deployment.yaml",
-                    "prometheus-service-mon.yaml",
-                    "prometheus-service.yaml"
-                ]
-                
-                for (file in files) {
-                    sh "kubectl apply -f k8s/${file} -n ${params.APP_NAMESPACE}"
+                    // Install AWS CLI if not installed
+                    sh '''
+                    if ! command -v aws &> /dev/null; then
+                        echo "Installing AWS CLI..."
+                        sudo apt update && sudo apt install -y awscli
+                    fi
+                    '''
+
+                    // Configure AWS CLI with Jenkins credentials
+                    sh '''
+                    mkdir -p ~/.aws
+                    echo "[default]" > ~/.aws/credentials
+                    echo "aws_access_key_id=${AWS_ACCESS_KEY}" >> ~/.aws/credentials
+                    echo "aws_secret_access_key=${AWS_SECRET_KEY}" >> ~/.aws/credentials
+                    echo "[default]" > ~/.aws/config
+                    echo "region=${AWS_REGION}" >> ~/.aws/config
+                    '''
+
+                    // Install kubectl if not installed
+                    sh '''
+                    if ! command -v kubectl &> /dev/null; then
+                        echo "Installing kubectl..."
+                        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                        chmod +x kubectl
+                        sudo mv kubectl /usr/local/bin/
+                    fi
+                    '''
+
+                    // Update kubeconfig for AWS EKS
+                    sh '''
+                    echo "Updating kubeconfig..."
+                    aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
+                    kubectl config view
+                    '''
                 }
             }
         }
-        
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh "kubectl create namespace ${params.APP_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                sh "kubectl apply -f k8s/ -n ${params.APP_NAMESPACE}"
+            }
+        }
+
         stage('Verify Deployment') {
             steps {
-                echo '🔹 Verifying deployment status...'
                 sh "kubectl get pods,svc,deployments -n ${params.APP_NAMESPACE}"
             }
         }
     }
-    
+
     post {
         success {
-            echo "✅ Deployment successful! Your application is running in the '${params.APP_NAMESPACE}' namespace."
+            echo "✅ Deployment successful!"
         }
         failure {
-            echo "❌ Deployment failed. Check Kubernetes logs for more details."
+            echo "❌ Deployment failed. Check logs for details."
         }
     }
 }
