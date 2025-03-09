@@ -14,6 +14,7 @@ pipeline {
     parameters {
         string(name: 'APP_NAMESPACE', defaultValue: 'default', description: 'Kubernetes namespace for application')
     }
+    
     stages {
         stage('Setup AWS CLI & Configure K8s') {
             steps {
@@ -56,7 +57,6 @@ pipeline {
             }
         }
 
-    stages {
         stage('Clone Repository') {
             steps {
                 echo 'Cloning the GitHub repository...'
@@ -107,5 +107,3 @@ pipeline {
         }
     }
 }
-    }
-
