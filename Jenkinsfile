@@ -7,6 +7,7 @@ pipeline {
         KUBECONFIG = '/var/lib/jenkins/.kube/config' // Path for kubeconfig
         AWS_ACCESS_KEY = credentials('AWS_KEY') // Uses Jenkins credential ID
         AWS_SECRET_KEY = credentials('AWS_S_KEY') // Uses Jenkins credential ID
+        ECR_REPOSITORY = 'finaldevop/dugems'
         IMAGE_TAG = "latest"
     }
 
