@@ -15,7 +15,7 @@ pipeline {
         
         stage('Deploy to Kubernetes') {
             steps {
-                sh "kubectl create namespace ${params.APP_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                sh "kubectl create namespace ${params.APP_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f --validate=false"
                 sh "kubectl apply -f k8s/ -n ${params.APP_NAMESPACE}"
             }
         }
