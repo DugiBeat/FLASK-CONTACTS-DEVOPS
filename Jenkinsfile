@@ -5,7 +5,7 @@
         AWS_REGION = 'eu-north-1'
         AWS_ACCESS_KEY = credentials('AWS_KEY')
         AWS_SECRET_KEY = credentials('AWS_S_KEY')
-        CLUSTER_NAME = 'eks-mause'
+        CLUSTER_NAME = 'eks_mause'
         ECR_REPOSITORY_URI = '423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems'  
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
