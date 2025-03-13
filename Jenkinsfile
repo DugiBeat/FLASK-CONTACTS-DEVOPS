@@ -10,6 +10,22 @@
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
     
+   stages {
+        stage('Setup AWS CLI') {
+            steps {
+                script {
+                    sh """
+                    export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY}
+                    export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_KEY}
+                    export AWS_DEFAULT_REGION=${AWS_REGION}
+                    
+                    aws sts get-caller-identity
+                    """
+                }
+            }
+        }
+    }
+
     stages {
         stage('Checkout') {
             steps {
