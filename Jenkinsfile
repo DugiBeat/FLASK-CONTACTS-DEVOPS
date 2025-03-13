@@ -9,8 +9,15 @@ pipeline {
         ECR_REPOSITORY_URI = '423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems'  
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
-    
-  stages {
+
+ stages {
+        stage('Checkout') {
+            steps {
+                echo 'Cloning repository...'
+                git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
+            }
+        }
+   
         stage('Setup AWS CLI') {
             steps {
                 script {
@@ -24,16 +31,7 @@ pipeline {
                 }
             }
         }
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                echo 'Cloning repository...'
-                git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
-            }
-        }
-        
+ 
          stage('Configure AWS') {
             steps {
                 sh '''
