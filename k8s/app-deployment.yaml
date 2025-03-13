@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: my-app-container
-        image: 123456789012.dkr.ecr.eu-north-1.amazonaws.com/flask-contacts:latest
+        image: 423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems:latest
         ports:
         - containerPort: 5000  # Make sure this matches your Flask app's port
         env:
