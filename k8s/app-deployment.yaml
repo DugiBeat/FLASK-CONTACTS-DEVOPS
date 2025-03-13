@@ -14,9 +14,9 @@ spec:
     spec:
       containers:
       - name: my-app-container
-        image: my-docker-registry/my-app-image:latest
+        image: 123456789012.dkr.ecr.eu-north-1.amazonaws.com/flask-contacts:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 5000  # Make sure this matches your Flask app's port
         env:
         - name: FLASK_APP
           value: "app.py"
