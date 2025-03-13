@@ -1,7 +1,7 @@
 pipeline {
-    agent any
+ agent any
     
-    environment {
+ environment {
         AWS_REGION = 'eu-north-1'
         AWS_ACCESS_KEY = credentials('AWS_KEY')
         AWS_SECRET_KEY = credentials('AWS_S_KEY')
