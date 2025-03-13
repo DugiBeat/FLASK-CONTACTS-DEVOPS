@@ -34,7 +34,7 @@ pipeline {
             }
         }
         
-        stage('Configure AWS') {
+         stage('Configure AWS') {
             steps {
                 sh '''
                 mkdir -p ~/.aws
