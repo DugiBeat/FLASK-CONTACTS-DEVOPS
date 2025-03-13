@@ -1,4 +1,4 @@
-  pipeline {
+pipeline {
     agent any
     
     environment {
@@ -10,7 +10,7 @@
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
     
-   stages {
+  stages {
         stage('Setup AWS CLI') {
             steps {
                 script {
