@@ -47,7 +47,6 @@ pipeline {
         
         stage('Configure kubectl') {
             steps {
-                sh 'kubectl apply -f k8s/aws-auth.yaml'
                 sh 'aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}'
                 sh 'kubectl config view'
                 sh 'kubectl get nodes'
