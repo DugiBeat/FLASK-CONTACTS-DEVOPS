@@ -1,23 +1,22 @@
 pipeline {
- agent any
-    
- environment {
+    agent any
+
+    environment {
         AWS_REGION = 'eu-north-1'
         AWS_ACCESS_KEY = credentials('AWS_KEY')
         AWS_SECRET_KEY = credentials('AWS_S_KEY')
-        CLUSTER_NAME = 'eks_mause'
         ECR_REPOSITORY_URI = '423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems'  
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
 
- stages {
+    stages {
         stage('Checkout') {
             steps {
                 echo 'Cloning repository...'
                 git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
             }
         }
-   
+
         stage('Setup AWS CLI') {
             steps {
                 script {
@@ -31,35 +30,14 @@ pipeline {
                 }
             }
         }
- 
-         stage('Configure AWS') {
-            steps {
-                sh '''
-                mkdir -p ~/.aws
-                echo "[default]" > ~/.aws/credentials
-                echo "aws_access_key_id=${AWS_ACCESS_KEY}" >> ~/.aws/credentials
-                echo "aws_secret_access_key=${AWS_SECRET_KEY}" >> ~/.aws/credentials
-                echo "[default]" > ~/.aws/config
-                echo "region=${AWS_REGION}" >> ~/.aws/config
-                '''
-            }
-        }
-        
-        stage('Configure kubectl') {
-            steps {
-                sh 'aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}'
-                sh 'kubectl config view'
-                sh 'kubectl get nodes'
-            }
-        }
-        
+
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ."
                 sh "docker tag ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ${ECR_REPOSITORY_URI}:latest"
             }
         }
-        
+
         stage('Push to ECR') {
             steps {
                 sh '''
@@ -69,27 +47,21 @@ pipeline {
                 '''
             }
         }
-        
-        stage('Update Kubernetes Manifests') {
+
+        stage('Run Docker Container Locally') {
             steps {
-                // Optional: Update image tag in manifests
                 sh '''
-                sed -i "s|image: ${ECR_REPOSITORY_URI}:.*|image: ${ECR_REPOSITORY_URI}:${IMAGE_TAG}|g" k8s/deployment.yaml
+                docker stop flask-container || true
+                docker rm flask-container || true
+                docker run -d --name flask-container -p 5000:5000 ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
                 '''
             }
         }
-        
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f k8s/'
-                sh 'kubectl get pods,svc'
-            }
-        }
     }
-    
+
     post {
         success {
-            echo "✅ Pipeline completed successfully! Application deployed to existing cluster."
+            echo "✅ Pipeline completed successfully! Docker image built, pushed to ECR, and running locally."
         }
         failure {
             echo "❌ Pipeline failed. Check the logs for more information."
