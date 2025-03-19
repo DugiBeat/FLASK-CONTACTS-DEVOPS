@@ -67,37 +67,48 @@ pipeline {
         stage('Run Docker Container Locally') {
             steps {
                 script {
-                    // Create a base command for running the container
-                    def runCommand = """
-                    sudo docker stop flask-container || true
-                    sudo docker rm flask-container || true
-                    sudo docker run -d --name flask-container -p 5052:5052 \
-                        -e DB_HOST=${DB_HOST} \
-                        -e DB_USER=${DB_USER} \
-                        -e DB_PASSWORD=${DB_PASSWORD} \
-                        -e DB_NAME=${DB_NAME} \
-                        -e DATABASE_TYPE=${DATABASE_TYPE} \
-                        -e DB_PORT=${DB_PORT} \
-                        -e MONGO_URI=${MONGO_URI}
-                    """
+                    // Stop and remove any existing container
+                    sh "sudo docker stop flask-container || true"
+                    sh "sudo docker rm flask-container || true"
                     
-                    // Add OpenAI API key if USE_OPENAI is true
-                    if (params.USE_OPENAI == 'true') {
-                        // Add OpenAI API key only if the credential exists
-                        try {
-                            withCredentials([string(credentialsId: 'OPENAI_API_KEY', variable: 'OPENAI_KEY')]) {
-                                runCommand += " -e OPENAI_API_KEY=${OPENAI_KEY}"
+                    // Use withCredentials to handle DB_PASSWORD securely
+                    withCredentials([string(credentialsId: 'DB_PASSWORD', variable: 'DB_PWD')]) {
+                        def dockerRunCmd = """
+                        sudo docker run -d --name flask-container -p 5052:5052 \\
+                            -e DB_HOST=${DB_HOST} \\
+                            -e DB_USER=${DB_USER} \\
+                            -e DB_PASSWORD=${DB_PWD} \\
+                            -e DB_NAME=${DB_NAME} \\
+                            -e DATABASE_TYPE=${DATABASE_TYPE} \\
+                            -e DB_PORT=${DB_PORT} \\
+                            -e MONGO_URI=${MONGO_URI} \\
+                            ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                        """
+                        
+                        // Add OpenAI API key if USE_OPENAI is true
+                        if (params.USE_OPENAI == 'true') {
+                            try {
+                                withCredentials([string(credentialsId: 'OPENAI_API_KEY', variable: 'OPENAI_KEY')]) {
+                                    dockerRunCmd = """
+                                    sudo docker run -d --name flask-container -p 5052:5052 \\
+                                        -e DB_HOST=${DB_HOST} \\
+                                        -e DB_USER=${DB_USER} \\
+                                        -e DB_PASSWORD=${DB_PWD} \\
+                                        -e DB_NAME=${DB_NAME} \\
+                                        -e DATABASE_TYPE=${DATABASE_TYPE} \\
+                                        -e DB_PORT=${DB_PORT} \\
+                                        -e MONGO_URI=${MONGO_URI} \\
+                                        -e OPENAI_API_KEY=${OPENAI_KEY} \\
+                                        ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                                    """
+                                }
+                            } catch (Exception e) {
+                                echo "OPENAI_API_KEY credential not found, continuing without it"
                             }
-                        } catch (Exception e) {
-                            echo "OPENAI_API_KEY credential not found, continuing without it"
                         }
+                        
+                        sh dockerRunCmd
                     }
-                    
-                    // Finalize the command by adding the image name
-                    runCommand += " ${ECR_REPOSITORY_URI}:${IMAGE_TAG}"
-                    
-                    // Execute the command
-                    sh runCommand
                 }
             }
         }
@@ -136,3 +147,4 @@ pipeline {
         }
     }
 }
+  
