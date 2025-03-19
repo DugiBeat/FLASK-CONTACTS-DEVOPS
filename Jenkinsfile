@@ -2,16 +2,16 @@ pipeline {
     agent any
     environment {
         AWS_REGION = 'eu-north-1'
-        AWS_ACCESS_KEY = credentials('AWS_KEY')
-        AWS_SECRET_KEY = credentials('AWS_S_KEY')
+        AWS_ACCESS_KEY_ID = credentials('AWS_KEY')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_S_KEY')
         ECR_REPOSITORY_URI = '423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems'  
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         
         // Application environment variables with defaults
         DB_HOST = "${params.DB_HOST ?: 'localhost'}"
-        DB_USER = "${params.DB_USER ?: 'root'}"
+        DB_USER = "${params.DB_USER ?: 'jenkins_dugems'}"
         DB_PASSWORD = credentials('DB_PASSWORD') // Keep this as credential
-        DB_NAME = "${params.DB_NAME ?: 'contacts_app'}"
+        DB_NAME = "${params.DB_NAME ?: 'dugems_flask_db'}"
         DATABASE_TYPE = "${params.DATABASE_TYPE ?: 'MYSQL'}"
         DB_PORT = "${params.DB_PORT ?: '3306'}"
         MONGO_URI = "${params.MONGO_URI ?: 'mongodb://localhost:27017/'}"
@@ -41,10 +41,6 @@ pipeline {
             steps {
                 script {
                     sh """
-                    export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY}
-                    export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_KEY}
-                    export AWS_DEFAULT_REGION=${AWS_REGION}
-                    
                     aws sts get-caller-identity
                     """
                 }
@@ -60,11 +56,11 @@ pipeline {
         
         stage('Push to ECR') {
             steps {
-                sh '''
-                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
-                docker push ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
-                docker push ${ECR_REPOSITORY_URI}:latest
-                '''
+                sh """
+                aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+                sudo docker push ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                sudo docker push ${ECR_REPOSITORY_URI}:latest
+                """
             }
         }
         
@@ -73,9 +69,9 @@ pipeline {
                 script {
                     // Create a base command for running the container
                     def runCommand = """
-                    docker stop flask-container || true
-                    docker rm flask-container || true
-                    docker run -d --name flask-container -p 5052:5052 \
+                    sudo docker stop flask-container || true
+                    sudo docker rm flask-container || true
+                    sudo docker run -d --name flask-container -p 5052:5052 \
                         -e DB_HOST=${DB_HOST} \
                         -e DB_USER=${DB_USER} \
                         -e DB_PASSWORD=${DB_PASSWORD} \
@@ -113,7 +109,7 @@ pipeline {
                 sleep 5
                 
                 # Execute migration script inside the container
-                docker exec flask-container python3 migrate.py || echo "Migration failed, but continuing"
+                sudo docker exec flask-container python3 migrate.py || echo "Migration failed, but continuing"
                 '''
             }
         }
