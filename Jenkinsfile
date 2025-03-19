@@ -53,8 +53,8 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ."
-                sh "docker tag ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ${ECR_REPOSITORY_URI}:latest"
+                sh "sudo docker build -t ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ."
+                sh "sudo docker tag ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ${ECR_REPOSITORY_URI}:latest"
             }
         }
         
