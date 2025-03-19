@@ -1,14 +1,23 @@
 pipeline {
     agent any
-
     environment {
         AWS_REGION = 'eu-north-1'
         AWS_ACCESS_KEY = credentials('AWS_KEY')
         AWS_SECRET_KEY = credentials('AWS_S_KEY')
         ECR_REPOSITORY_URI = '423623847692.dkr.ecr.eu-north-1.amazonaws.com/finaldevop/dugems'  
         IMAGE_TAG = "${env.BUILD_NUMBER}"
+        
+        // Application environment variables
+        DB_HOST = credentials('DB_HOST')
+        DB_USER = credentials('DB_USER')
+        DB_PASSWORD = credentials('DB_PASSWORD')
+        DB_NAME = credentials('DB_NAME')
+        DATABASE_TYPE = credentials('DATABASE_TYPE')
+        DB_PORT = credentials('DB_PORT')
+        OPENAI_API_KEY = credentials('OPENAI_API_KEY')
+        MONGO_URI = credentials('MONGO_URI')
     }
-
+    
     stages {
         stage('Checkout') {
             steps {
@@ -16,7 +25,7 @@ pipeline {
                 git url: 'https://github.com/DugiBeat/FLASK-CONTACTS-DEVOPS.git', branch: 'master'
             }
         }
-
+        
         stage('Setup AWS CLI') {
             steps {
                 script {
@@ -30,14 +39,14 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ."
                 sh "docker tag ${ECR_REPOSITORY_URI}:${IMAGE_TAG} ${ECR_REPOSITORY_URI}:latest"
             }
         }
-
+        
         stage('Push to ECR') {
             steps {
                 sh '''
@@ -47,18 +56,49 @@ pipeline {
                 '''
             }
         }
-
+        
         stage('Run Docker Container Locally') {
             steps {
                 sh '''
                 docker stop flask-container || true
                 docker rm flask-container || true
-                docker run -d --name flask-container -p 5000:5000 ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                docker run -d --name flask-container \
+                    -p 5052:5052 \
+                    -e DB_HOST=${DB_HOST} \
+                    -e DB_USER=${DB_USER} \
+                    -e DB_PASSWORD=${DB_PASSWORD} \
+                    -e DB_NAME=${DB_NAME} \
+                    -e DATABASE_TYPE=${DATABASE_TYPE} \
+                    -e DB_PORT=${DB_PORT} \
+                    -e OPENAI_API_KEY=${OPENAI_API_KEY} \
+                    -e MONGO_URI=${MONGO_URI} \
+                    ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                '''
+            }
+        }
+        
+        stage('Run Database Migration') {
+            steps {
+                sh '''
+                # Execute migration script inside the container
+                docker exec flask-container python3 migrate.py
+                '''
+            }
+        }
+        
+        stage('Verify Application') {
+            steps {
+                sh '''
+                # Wait for the application to start
+                sleep 10
+                
+                # Check if the application is running
+                curl -s http://localhost:5052/ || echo "Application not responding"
                 '''
             }
         }
     }
-
+    
     post {
         success {
             echo "✅ Pipeline completed successfully! Docker image built, pushed to ECR, and running locally."
