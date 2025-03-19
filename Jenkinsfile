@@ -14,9 +14,9 @@ pipeline {
         DB_NAME = "${params.DB_NAME ?: 'contacts_app'}"
         DATABASE_TYPE = "${params.DATABASE_TYPE ?: 'MYSQL'}"
         DB_PORT = "${params.DB_PORT ?: '3306'}"
-        // Optional variables - only use if credentials exist
-        OPENAI_API_KEY = credentials('OPENAI_API_KEY') // Optional
         MONGO_URI = "${params.MONGO_URI ?: 'mongodb://localhost:27017/'}"
+        
+        // Note: OPENAI_API_KEY is now handled separately in the script
     }
     
     parameters {
@@ -26,6 +26,7 @@ pipeline {
         string(name: 'DATABASE_TYPE', defaultValue: 'MYSQL', description: 'Database type (MYSQL or MONGO)')
         string(name: 'DB_PORT', defaultValue: '3306', description: 'Database port')
         string(name: 'MONGO_URI', defaultValue: 'mongodb://localhost:27017/', description: 'MongoDB URI (if using MongoDB)')
+        string(name: 'USE_OPENAI', defaultValue: 'false', description: 'Set to true if you want to use OpenAI API')
     }
     
     stages {
@@ -70,35 +71,37 @@ pipeline {
         stage('Run Docker Container Locally') {
             steps {
                 script {
-                    // Create environment variables string dynamically
-                    def envVars = [
-                        "-e DB_HOST=${DB_HOST}",
-                        "-e DB_USER=${DB_USER}",
-                        "-e DB_PASSWORD=${DB_PASSWORD}",
-                        "-e DB_NAME=${DB_NAME}",
-                        "-e DATABASE_TYPE=${DATABASE_TYPE}",
-                        "-e DB_PORT=${DB_PORT}",
-                        "-e MONGO_URI=${MONGO_URI}"
-                    ]
-                    
-                    // Add optional environment variables only if they exist
-                    try {
-                        withCredentials([string(credentialsId: 'OPENAI_API_KEY', variable: 'OPENAI_KEY')]) {
-                            envVars.add("-e OPENAI_API_KEY=${OPENAI_KEY}")
-                        }
-                    } catch (Exception e) {
-                        echo "OPENAI_API_KEY not found, continuing without it"
-                    }
-                    
-                    // Join all environment variables
-                    def envString = envVars.join(' ')
-                    
-                    // Run container with environment variables
-                    sh """
+                    // Create a base command for running the container
+                    def runCommand = """
                     docker stop flask-container || true
                     docker rm flask-container || true
-                    docker run -d --name flask-container -p 5052:5052 ${envString} ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+                    docker run -d --name flask-container -p 5052:5052 \
+                        -e DB_HOST=${DB_HOST} \
+                        -e DB_USER=${DB_USER} \
+                        -e DB_PASSWORD=${DB_PASSWORD} \
+                        -e DB_NAME=${DB_NAME} \
+                        -e DATABASE_TYPE=${DATABASE_TYPE} \
+                        -e DB_PORT=${DB_PORT} \
+                        -e MONGO_URI=${MONGO_URI}
                     """
+                    
+                    // Add OpenAI API key if USE_OPENAI is true
+                    if (params.USE_OPENAI == 'true') {
+                        // Add OpenAI API key only if the credential exists
+                        try {
+                            withCredentials([string(credentialsId: 'OPENAI_API_KEY', variable: 'OPENAI_KEY')]) {
+                                runCommand += " -e OPENAI_API_KEY=${OPENAI_KEY}"
+                            }
+                        } catch (Exception e) {
+                            echo "OPENAI_API_KEY credential not found, continuing without it"
+                        }
+                    }
+                    
+                    // Finalize the command by adding the image name
+                    runCommand += " ${ECR_REPOSITORY_URI}:${IMAGE_TAG}"
+                    
+                    // Execute the command
+                    sh runCommand
                 }
             }
         }
@@ -110,7 +113,7 @@ pipeline {
                 sleep 5
                 
                 # Execute migration script inside the container
-                docker exec flask-container python3 migrate.py || echo "Migration failed but continuing"
+                docker exec flask-container python3 migrate.py || echo "Migration failed, but continuing"
                 '''
             }
         }
@@ -122,7 +125,7 @@ pipeline {
                 sleep 10
                 
                 # Check if the application is running
-                curl -s http://localhost:5052/ || echo "Application not responding but continuing"
+                curl -s http://localhost:5052/ || echo "Application not responding, but continuing"
                 '''
             }
         }
