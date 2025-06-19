@@ -49,9 +49,9 @@ Built to run locally via Docker or on cloud via Kubernetes (Helm) with Jenkins, 
 
 ---
 
-## 📦 Installation
+# 📦 Installation
 
-### Python + Virtual Environment (Debian/Ubuntu)
+## Python + Virtual Environment (Debian/Ubuntu)
 
 ```bash
 sudo apt update
@@ -68,7 +68,7 @@ Install Python Requirements
 pip install -r requirements.txt
 ```
 
-🔐 Environment Variables
+### 🔐 Environment Variables
 Create a .env file in your root directory with the following:
 
 ```env
@@ -106,7 +106,7 @@ python3 app.py
 
 App is now live at: http://localhost:5052
 
-🔗 Routes
+### 🔗 Routes
 UI Views
 / → Redirects to /viewContacts
 
@@ -155,16 +155,14 @@ Replace with your own if needed
 1. Helm Chart
 Helm files located under:
 
-bash
-Copy
-Edit
+```bash
 /helm/dugma-webapp/
+```
 To install:
 
-bash
-Copy
-Edit
+```bash
 helm install dugma ./helm/dugma-webapp
+```
 2. Jenkins Pipeline (Optional)
 Connect Jenkinsfile to a GitHub repo with webapp and helm folders
 
@@ -177,26 +175,23 @@ Deploy Helm chart to EKS using kubectl
 📊 Monitoring (Optional)
 Prometheus + Grafana monitoring stack can be deployed via Helm:
 
-bash
-Copy
-Edit
+```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm install monitoring prometheus-community/kube-prometheus-stack
+```
 Grafana dashboards can be configured for app metrics once exposed via Prometheus exporter.
 
 🐳 Docker Usage
 Build & Run:
 
-bash
-Copy
-Edit
+```bash
 docker-compose up --build
-Tears down:
+```
 
-bash
-Copy
-Edit
+Tears down:
+```bash
 docker-compose down -v
+```
 Ensure Dockerfile, .env, migrate.py, and wait-for-mysql.sh are included.
 
 💾 CSV Export
